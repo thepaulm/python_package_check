@@ -207,6 +207,12 @@ def main():
                     retval = -1
                     print "FAILED: %s ver %s installed, %s ver %s requires %s" % \
                           (p.name, p.version, p2.name, p2.version, p2.deps[p.name].constraint)
+                    for p3 in packages.itervalues():
+                        if p3 != p2 and p.name in p3.deps:
+                            other = p3.deps[p.name].constraint
+                            if other is None:
+                                other = "any"
+                            print "\talso from: %s ver %s requiring %s" % (p3.name, p3.version, other)
     sys.exit(retval)
 
 
