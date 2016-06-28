@@ -2,14 +2,15 @@
 
 import glob
 import re
-import string
 import sys
+import string
+import argparse
 from pkg_resources import parse_version
 
 dist_glob_ending = '/*.dist-info'
 egg_glob_ending = '/*.egg-info'
 
-glob_search_base = 'env/lib/python2.7/site-packages/'
+default_glob_search_base = 'env/lib/python2.7/site-packages/'
 
 
 nre = re.compile("^Name: (\S*)")
@@ -78,11 +79,11 @@ def constraint_compare(inst, constraint):
     return True
 
 
-def get_dist_infos():
+def get_dist_infos(glob_search_base):
     return glob.glob(glob_search_base + dist_glob_ending)
 
 
-def get_egg_infos():
+def get_egg_infos(glob_search_base):
     return glob.glob(glob_search_base + egg_glob_ending)
 
 
@@ -168,22 +169,32 @@ def parse_EGG(d):
     return package
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--package-path",
+                        help="path to packages install dir (eg. site-packages)")
+    return parser.parse_args()
+
+
 def main():
 
-    global glob_search_base
+    retval = 0
+    args = get_args()
 
-    if len(sys.argv) > 1:
-        glob_search_base = sys.argv[1]
+    if args.package_path:
+        glob_search_base = args.package_path
+    else:
+        glob_search_base = default_glob_search_base
 
     packages = {}
 
-    dist_infos = get_dist_infos()
+    dist_infos = get_dist_infos(glob_search_base)
     for d in dist_infos:
         p = parse_METADATA(d)
         if p:
             packages[p.name] = p
 
-    egg_infos = get_egg_infos()
+    egg_infos = get_egg_infos(glob_search_base)
     for e in egg_infos:
         p = parse_EGG(e)
         if p:
@@ -193,8 +204,10 @@ def main():
         for p2 in packages.itervalues():
             if p.name in p2.deps and p2.deps[p.name].constraint is not None:
                 if not constraint_compare(p.version, p2.deps[p.name].constraint):
+                    retval = -1
                     print "FAILED: %s ver %s installed, %s ver %s requires %s" % \
-                           (p.name, p.version, p2.name, p2.version, p2.deps[p.name].constraint)
+                          (p.name, p.version, p2.name, p2.version, p2.deps[p.name].constraint)
+    sys.exit(retval)
 
 
 if __name__ == '__main__':
