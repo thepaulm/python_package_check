@@ -173,6 +173,8 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--package-path",
                         help="path to packages install dir (eg. site-packages)")
+    parser.add_argument("-e", "--exclude-requires-from",
+                        help="comma seperated exclude list requirements from these packages")
     return parser.parse_args()
 
 
@@ -185,6 +187,10 @@ def main():
         glob_search_base = args.package_path
     else:
         glob_search_base = default_glob_search_base
+
+    excludes = None
+    if args.exclude_requires_from:
+        excludes = args.exclude_requires_from.split(',')
 
     packages = {}
 
@@ -203,7 +209,8 @@ def main():
     for p in packages.itervalues():
         for p2 in packages.itervalues():
             if p.name in p2.deps and p2.deps[p.name].constraint is not None:
-                if not constraint_compare(p.version, p2.deps[p.name].constraint):
+                if not constraint_compare(p.version, p2.deps[p.name].constraint) and \
+                   p2.name not in excludes:
                     retval = -1
                     print "FAILED: %s ver %s installed, %s ver %s requires %s" % \
                           (p.name, p.version, p2.name, p2.version, p2.deps[p.name].constraint)
