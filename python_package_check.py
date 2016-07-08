@@ -10,8 +10,6 @@ from pkg_resources import parse_version
 dist_glob_ending = '/*.dist-info'
 egg_glob_ending = '/*.egg-info'
 
-default_glob_search_base = 'env/lib/python2.7/site-packages/'
-
 
 nre = re.compile("^Name: (\S*)")
 vre = re.compile("^Version: (\S*)")
@@ -172,7 +170,8 @@ def parse_EGG(d):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--package-path",
-                        help="path to packages install dir (eg. site-packages)")
+                        help="path to packages install dir (eg. site-packages). Default is "
+                              "all in sys.path")
     parser.add_argument("-e", "--exclude-requires-from",
                         help="comma seperated exclude list requirements from these packages")
     return parser.parse_args()
@@ -184,27 +183,28 @@ def main():
     args = get_args()
 
     if args.package_path:
-        glob_search_base = args.package_path
+        paths = [args.package_path]
     else:
-        glob_search_base = default_glob_search_base
+        paths = sys.path
 
-    excludes = None
+    excludes = []
     if args.exclude_requires_from:
         excludes = args.exclude_requires_from.split(',')
 
     packages = {}
 
-    dist_infos = get_dist_infos(glob_search_base)
-    for d in dist_infos:
-        p = parse_METADATA(d)
-        if p:
-            packages[p.name] = p
+    for glob_search_base in paths:
+        dist_infos = get_dist_infos(glob_search_base)
+        for d in dist_infos:
+            p = parse_METADATA(d)
+            if p:
+                packages[p.name] = p
 
-    egg_infos = get_egg_infos(glob_search_base)
-    for e in egg_infos:
-        p = parse_EGG(e)
-        if p:
-            packages[p.name] = p
+        egg_infos = get_egg_infos(glob_search_base)
+        for e in egg_infos:
+            p = parse_EGG(e)
+            if p:
+                packages[p.name] = p
 
     for p in packages.itervalues():
         for p2 in packages.itervalues():
